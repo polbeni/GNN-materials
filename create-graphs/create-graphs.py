@@ -22,14 +22,15 @@ def get_nodes(struct):
     Outputs:
         node_list: list of nodes with their features
     """
-    
+    # get the number of atoms in the unit cell
     atoms_number = struct.num_sites
 
+    # create the node list
     node_list = [None]*atoms_number
 
+    # save nodes in node list with the features of the given atom
     for atom in range(atoms_number):
         node_list[atom] = atoms_dict[(struct.sites[atom]).species_string]
-
 
     return node_list
 
@@ -37,11 +38,6 @@ parser = CifParser('structures/mp-32780.cif')
 structure_object = parser.get_structures()[0]
 nodes1 = get_nodes(structure_object)
 print(nodes1)
-
-#parser = CifParser('structures/mp-976868.cif')
-#structure_object = parser.get_structures()[0]
-#nodes2 = get_nodes(structure_object)
-#print(nodes2)
 
 
 def get_edges(struct, lim_dist):
@@ -58,25 +54,32 @@ def get_edges(struct, lim_dist):
         adjacency_list: list of pairs of nodes that verify to be closer than lim_dist
         edge_list: list of features for all the edges in adjacency list
     """
+    # create adjacency and edge lists
     adjacency_list = []
     edge_list = []
 
+    # get the lattice parameters and the smallest parameter
     lattice_parameters = struct.lattice.abc
     max_parameter = min(lattice_parameters)
 
+    # find the minimum supercell to consider all the connections for the given limit distance
     n_supercell = 2
     param_supercell = max_parameter
     while param_supercell < lim_dist:
         n_supercell = n_supercell + 1
         param_supercell = max_parameter*(n_supercell - 1) 
 
+    # get the number of atoms in the unit cell
     atoms_number = struct.num_sites
 
+    # create the supercell
     scaling_matrix = [[n_supercell, 0, 0], [0, n_supercell, 0], [0, 0, n_supercell]]
     supercell = struct.make_supercell(scaling_matrix)
 
+    # get the number of atoms in the supercell
     atoms_supercell_number = supercell.num_sites
 
+    # check if there is a connection between two atoms
     for atom in range(atoms_number):
         for atom_super in range(atoms_supercell_number):
             a_cell = (supercell.sites[atom*(n_supercell**3)]).coords[0]
