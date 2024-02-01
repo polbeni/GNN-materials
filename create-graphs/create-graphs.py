@@ -3,11 +3,16 @@
 
 # Code to generate graphs from unit cell structure files (as cif or POSCAR files)
 
+import os
 import json
 import math
+import glob
 
 from pymatgen.io.cif import CifParser
 from pymatgen.core.structure import Structure
+
+import torch
+from torch_geometric.data import Data
 
 with open('atoms_dict.json', 'r') as json_file:
     atoms_dict = json.load(json_file)
@@ -33,12 +38,6 @@ def get_nodes(struct):
         node_list[atom] = atoms_dict[(struct.sites[atom]).species_string]
 
     return node_list
-
-parser = CifParser('structures/mp-32780.cif')
-structure_object = parser.get_structures()[0]
-nodes1 = get_nodes(structure_object)
-print(nodes1)
-
 
 def get_edges(struct, lim_dist):
     """
@@ -104,7 +103,70 @@ def get_edges(struct, lim_dist):
 
     return adjacency_list, edge_list
 
+# define the maximum longitude to consider edge connections (angstroms)
+edge_radius = 5.5
 
-adjacency1, edge1 = get_edges(structure_object, 5.5)
-print(adjacency1)
-print(edge1)
+# create a list with all the structures that we want transform to a graph (in this case cif files with name mp-#.cif)
+structures_path = 'structures/'
+structures_list = glob.glob(f'{structures_path}mp-*')
+
+# open a file to save the problematic structures
+discarted_structures = open('discarted_structures.txt', 'w')
+
+# transform each structure
+"""
+number_struc = 1
+total_number_struc = len(structures_list)
+for struc_path in structures_list:
+    print(f'Structure number {number_struc} of a total of {total_number_struc}')
+
+    # avoid corrupt cif files
+    try:
+        parser = CifParser(struc_path)
+        structure_object = parser.get_structures()[0]
+
+        nodes = get_nodes(structure_object)
+
+        adjacency, edges = get_edges(structure_object, edge_radius)
+        
+        print('Graph generated!')
+    except:
+        print('Problem with the cif file')
+
+        discarted_structures.write(f'{os.path.basename(struc_path)}\n')
+
+    # check if nodes or edge list is empty (if it is the case discart the structure)
+    if (len(edges) == 0) or (len(nodes) == 0):
+        print('But empty lists')
+
+        discarted_structures.write(f'{os.path.basename(struc_path)}\n')
+    
+    number_struc = number_struc + 1
+"""
+
+discarted_structures.close()
+
+parser = CifParser('structures/mp-1167.cif')
+structure_object = parser.get_structures()[0]
+
+nodes = get_nodes(structure_object)
+
+adjacency, edges = get_edges(structure_object, edge_radius)
+
+nodes_torch = torch.tensor(nodes)
+adjacency_torch = torch.tensor(adjacency)
+edges_torch = torch.tensor(edges)
+
+data = Data(x=nodes_torch, edge_index=adjacency_torch, edge_attr=edges_torch)
+
+print(nodes_torch)
+print(adjacency_torch)
+print(adjacency_torch)
+
+torch.save(data, 'mp-1167.pt')
+
+loaded_graph_data = torch.load('mp-1167.pt')
+
+
+######## IMPORTANT ########
+# change edges to save just one direction, (0,2) and not (0,2) and (2,0)
