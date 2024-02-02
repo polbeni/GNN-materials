@@ -1,4 +1,4 @@
-# Pol Benítez Colominas, January 2024
+# Pol Benítez Colominas, January 2024 - February 2024
 # Universitat Politècnica de Catalunya
 
 # Code to generate graphs from unit cell structure files (as cif or POSCAR files)
@@ -78,28 +78,32 @@ def get_edges(struct, lim_dist):
     # get the number of atoms in the supercell
     atoms_supercell_number = supercell.num_sites
 
-    # check if there is a connection between two atoms
+    # check if there is a connection between two atoms (count just one of the directions, example: just (0,2), not (0,2) and (2,0))
     for atom in range(atoms_number):
-        for atom_super in range(atoms_supercell_number):
+        for atom_super in range(atoms_supercell_number - atom*(n_supercell**3)):
             a_cell = (supercell.sites[atom*(n_supercell**3)]).coords[0]
             b_cell = (supercell.sites[atom*(n_supercell**3)]).coords[1]
             c_cell = (supercell.sites[atom*(n_supercell**3)]).coords[2]
 
-            a_super = (supercell.sites[atom_super]).coords[0]
-            b_super = (supercell.sites[atom_super]).coords[1]
-            c_super = (supercell.sites[atom_super]).coords[2]
+            a_super = (supercell.sites[atom_super + atom*(n_supercell**3)]).coords[0]
+            b_super = (supercell.sites[atom_super + atom*(n_supercell**3)]).coords[1]
+            c_super = (supercell.sites[atom_super + atom*(n_supercell**3)]).coords[2]
 
             euclidean_distance = ((a_cell - a_super)**2 + (b_cell - b_super)**2 + (c_cell - c_super)**2)**0.5
 
             if (euclidean_distance <= lim_dist) and (euclidean_distance > 1e-5):
-                edge_pair = [atom, math.trunc(atom_super/(n_supercell**3))]
+                edge_pair = [atom, math.trunc((atom_super + atom*(n_supercell**3))/(n_supercell**3))]
                 adjacency_list.append(edge_pair)
+                # save the same edge with the opposite direction since we want undirected graphs
+                #edge_pair = [math.trunc((atom_super + atom*(n_supercell**3))/(n_supercell**3)), atom]
+                #adjacency_list.append(edge_pair)
 
                 a_dist = abs(a_cell - a_super)
                 b_dist = abs(b_cell - b_super)
                 c_dist = abs(c_cell - c_super)
                 edge_feature = [a_dist, b_dist, c_dist]
                 edge_list.append(edge_feature)
+                #edge_list.append(edge_feature)
 
     return adjacency_list, edge_list
 
@@ -155,17 +159,24 @@ adjacency, edges = get_edges(structure_object, edge_radius)
 
 nodes_torch = torch.tensor(nodes)
 adjacency_torch = torch.tensor(adjacency)
+#adjacency_torch = adjacency_torch.t()
 edges_torch = torch.tensor(edges)
 
-data = Data(x=nodes_torch, edge_index=adjacency_torch, edge_attr=edges_torch)
+data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
 
 print(nodes_torch)
 print(adjacency_torch)
-print(adjacency_torch)
+print(edges_torch)
+
+print(data.is_directed())
+print(data.has_isolated_nodes())
+print(data.has_self_loops())
 
 torch.save(data, 'mp-1167.pt')
 
 loaded_graph_data = torch.load('mp-1167.pt')
+
+
 
 
 ######## IMPORTANT ########
