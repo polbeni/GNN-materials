@@ -3,16 +3,22 @@
 
 # Code to generate graphs from unit cell structure files (as cif or POSCAR files)
 
+# system modules
 import os
+import shutil
 import json
 import math
 import glob
 
+# pymatgen modules
 from pymatgen.io.cif import CifParser
 from pymatgen.core.structure import Structure
 
+# pytorch and torch geometric modules
 import torch
+import torch_geometric.transforms as T
 from torch_geometric.data import Data
+
 
 with open('atoms_dict.json', 'r') as json_file:
     atoms_dict = json.load(json_file)
@@ -118,7 +124,12 @@ structures_list = glob.glob(f'{structures_path}mp-*')
 discarted_structures = open('discarted_structures.txt', 'w')
 
 # transform each structure
-"""
+if os.path.exists('graph_structures'):
+    shutil.rmtree('graph_structures')
+os.mkdir('graph_structures')
+
+transform = T.Compose([T.ToUndirected()]) # transform graphs to undirected
+
 number_struc = 1
 total_number_struc = len(structures_list)
 for struc_path in structures_list:
@@ -127,15 +138,23 @@ for struc_path in structures_list:
     # avoid corrupt cif files
     try:
         parser = CifParser(struc_path)
-        structure_object = parser.get_structures()[0]
+        structure_object = parser.parse_structures(primitive=True)[0]
 
         nodes = get_nodes(structure_object)
 
         adjacency, edges = get_edges(structure_object, edge_radius)
+
+        nodes_torch = torch.tensor(nodes)
+        adjacency_torch = torch.tensor(adjacency)
+        edges_torch = torch.tensor(edges)
+
+        discarted = False
         
         print('Graph generated!')
     except:
         print('Problem with the cif file')
+
+        discarted = True
 
         discarted_structures.write(f'{os.path.basename(struc_path)}\n')
 
@@ -143,41 +162,20 @@ for struc_path in structures_list:
     if (len(edges) == 0) or (len(nodes) == 0):
         print('But empty lists')
 
+        discarted = True
+
         discarted_structures.write(f'{os.path.basename(struc_path)}\n')
+
+    # save the structures in torch geometric files (if they are not corrupt)
+    if discarted == False:
+        data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
+
+        transform = T.Compose([T.ToUndirected()])
+
+        path_to_save = struc_path.split('/')[1].split('.')[0]
+
+        torch.save(data, 'graph_structures/' + path_to_save + '.pt')
     
     number_struc = number_struc + 1
-"""
 
 discarted_structures.close()
-
-parser = CifParser('structures/mp-1167.cif')
-structure_object = parser.get_structures()[0]
-
-nodes = get_nodes(structure_object)
-
-adjacency, edges = get_edges(structure_object, edge_radius)
-
-nodes_torch = torch.tensor(nodes)
-adjacency_torch = torch.tensor(adjacency)
-#adjacency_torch = adjacency_torch.t()
-edges_torch = torch.tensor(edges)
-
-data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
-
-print(nodes_torch)
-print(adjacency_torch)
-print(edges_torch)
-
-print(data.is_directed())
-print(data.has_isolated_nodes())
-print(data.has_self_loops())
-
-torch.save(data, 'mp-1167.pt')
-
-loaded_graph_data = torch.load('mp-1167.pt')
-
-
-
-
-######## IMPORTANT ########
-# change edges to save just one direction, (0,2) and not (0,2) and (2,0)
