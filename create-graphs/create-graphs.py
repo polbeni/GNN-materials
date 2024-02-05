@@ -130,6 +130,7 @@ os.mkdir('graph_structures')
 
 transform = T.Compose([T.ToUndirected()]) # transform graphs to undirected
 
+"""
 number_struc = 1
 total_number_struc = len(structures_list)
 for struc_path in structures_list:
@@ -177,5 +178,33 @@ for struc_path in structures_list:
         torch.save(data, 'graph_structures/' + path_to_save + '.pt')
     
     number_struc = number_struc + 1
-
+"""
 discarted_structures.close()
+
+parser = CifParser('structures/mp-8762.cif')
+structure_object = parser.parse_structures(primitive=True)[0]
+
+nodes = get_nodes(structure_object)
+
+adjacency, edges = get_edges(structure_object, edge_radius)
+
+nodes_torch = torch.tensor(nodes)
+adjacency_torch = torch.tensor(adjacency)
+edges_torch = torch.tensor(edges)
+
+data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
+print(data.is_directed())
+
+torch.set_printoptions(threshold=10_000)
+
+print(data.edge_index)
+print(len(data.edge_index[0]))
+print(len(data.edge_index[1]))
+
+
+data = transform(data)
+print(data.is_directed())
+
+print(data.edge_index)
+print(len(data.edge_index[0]))
+print(len(data.edge_index[1]))
