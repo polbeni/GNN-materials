@@ -16,7 +16,7 @@ from pymatgen.core.structure import Structure
 
 # pytorch and torch geometric modules
 import torch
-import torch_geometric.transforms as T
+import torch_geometric.utils as utils
 from torch_geometric.data import Data
 
 
@@ -97,24 +97,30 @@ def get_edges(struct, lim_dist):
 
             euclidean_distance = ((a_cell - a_super)**2 + (b_cell - b_super)**2 + (c_cell - c_super)**2)**0.5
 
-            if (euclidean_distance <= lim_dist) and (euclidean_distance > 1e-5):
+            if (euclidean_distance <= lim_dist) and (euclidean_distance > 1e-5): 
                 edge_pair = [atom, math.trunc((atom_super + atom*(n_supercell**3))/(n_supercell**3))]
-                adjacency_list.append(edge_pair)
-                # save the same edge with the opposite direction since we want undirected graphs
-                #edge_pair = [math.trunc((atom_super + atom*(n_supercell**3))/(n_supercell**3)), atom]
-                #adjacency_list.append(edge_pair)
 
                 a_dist = abs(a_cell - a_super)
                 b_dist = abs(b_cell - b_super)
                 c_dist = abs(c_cell - c_super)
                 edge_feature = [a_dist, b_dist, c_dist]
-                edge_list.append(edge_feature)
-                #edge_list.append(edge_feature)
+
+                # chech if it is self-loop, if not save twice to be undirected
+                if edge_pair[0] != edge_pair[1]:
+                    adjacency_list.append(edge_pair)
+                    edge_pair2 = [edge_pair[1], edge_pair[0]]
+                    adjacency_list.append(edge_pair2)
+
+                    edge_list.append(edge_feature)
+                    edge_list.append(edge_feature)
+                else:
+                    adjacency_list.append(edge_pair)
+                    edge_list.append(edge_feature)
 
     return adjacency_list, edge_list
 
 # define the maximum longitude to consider edge connections (angstroms)
-edge_radius = 5.5
+edge_radius = 5.5   
 
 # create a list with all the structures that we want transform to a graph (in this case cif files with name mp-#.cif)
 structures_path = 'structures/'
@@ -128,9 +134,6 @@ if os.path.exists('graph_structures'):
     shutil.rmtree('graph_structures')
 os.mkdir('graph_structures')
 
-transform = T.Compose([T.ToUndirected()]) # transform graphs to undirected
-
-"""
 number_struc = 1
 total_number_struc = len(structures_list)
 for struc_path in structures_list:
@@ -171,40 +174,10 @@ for struc_path in structures_list:
     if discarted == False:
         data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
 
-        transform = T.Compose([T.ToUndirected()])
-
         path_to_save = struc_path.split('/')[1].split('.')[0]
 
         torch.save(data, 'graph_structures/' + path_to_save + '.pt')
     
     number_struc = number_struc + 1
-"""
+
 discarted_structures.close()
-
-parser = CifParser('structures/mp-8762.cif')
-structure_object = parser.parse_structures(primitive=True)[0]
-
-nodes = get_nodes(structure_object)
-
-adjacency, edges = get_edges(structure_object, edge_radius)
-
-nodes_torch = torch.tensor(nodes)
-adjacency_torch = torch.tensor(adjacency)
-edges_torch = torch.tensor(edges)
-
-data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
-print(data.is_directed())
-
-torch.set_printoptions(threshold=10_000)
-
-print(data.edge_index)
-print(len(data.edge_index[0]))
-print(len(data.edge_index[1]))
-
-
-data = transform(data)
-print(data.is_directed())
-
-print(data.edge_index)
-print(len(data.edge_index[0]))
-print(len(data.edge_index[1]))
