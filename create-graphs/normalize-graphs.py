@@ -45,6 +45,16 @@ mean_edge = edge_features.mean(dim=0)
 std_edge = edge_features.std(dim=0)
 edge_features = (edge_features - mean_edge)/std_edge
 
+# save the normalization values for future data
+normalization_parameters = open('normalization_parameters.txt', 'w')
+normalization_parameters.write('mean_node  std_node  mean_edge  std_edge\n')
+normalization_parameters.write(f'{mean_node}  {std_node}  {mean_edge}  {std_edge}')
+normalization_parameters.close()
+
+print('')
+print('Graphs normalized!!')
+print('')
+
 # normalize all the graphs and save them in torch binary files
 if os.path.exists('normalized_graphs'):
     shutil.rmtree('normalized_graphs')
@@ -58,33 +68,19 @@ for graph in graphs:
     num_nodes = graph.num_nodes
     num_edges = graph.num_edges
 
-    graph.x = node_features[node_idx: node_idx + num_nodes]
-    graph.edge_attr = edge_features[edge_idx: edge_idx + num_edges]
+    normalized_x = (node_features[node_idx: node_idx + num_nodes]).clone().detach()
+    normalized_edge_attr = (edge_features[edge_idx: edge_idx + num_edges]).clone().detach()
+    normalized_edge_index = (graph.edge_index).clone().detach()
+
+    normalized_graph = Data(x=normalized_x, edge_attr=normalized_edge_attr, edge_index=normalized_edge_index)
 
     node_idx = node_idx + num_nodes
     edge_idx = edge_idx + num_edges
 
     name_to_save = structures_list[num_strucuture - 1].split('/')[1].split('.')[0]
 
-    # torch.save(graph, 'normalized_graphs/' + name_to_save + '.pt')
-
-    print(f'Normalized graph {num_strucuture} of {len(graphs)}')
-
-    num_strucuture = num_strucuture + 1
-
-num_strucuture = 0
-for graph_path in structures_list:
-    name_to_save = graph_path.split('/')[1].split('.')[0]
-
-    normalized_graph = Data(x=graphs[num_strucuture].x, edge_index=graphs[num_strucuture].edge_index, edge_attr=graphs[num_strucuture].edge_attr)
-
-    print(normalized_graph.x)
-    print(normalized_graph.edge_index)
-    print(normalized_graph.edge_attr)
-    print(normalized_graph.is_directed())
-
     torch.save(normalized_graph, 'normalized_graphs/' + name_to_save + '.pt')
 
-    print(f'Saved normalized graph {num_strucuture + 1} of {len(graphs)}')
+    print(f'Normalized graph {num_strucuture} of {len(graphs)}')
 
     num_strucuture = num_strucuture + 1
