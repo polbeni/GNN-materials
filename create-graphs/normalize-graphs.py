@@ -83,7 +83,7 @@ for graph_path in structures_list:
     print(normalized_graph.edge_attr)
     print(normalized_graph.is_directed())
 
-    torch.save(normalized_graph, 'graph_structures/' + name_to_save + '.pt')
+    torch.save(normalized_graph, 'normalized_graphs/' + name_to_save + '.pt')
 
     print(f'Saved normalized graph {num_strucuture + 1} of {len(graphs)}')
 
