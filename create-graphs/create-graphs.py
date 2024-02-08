@@ -65,14 +65,17 @@ def get_edges(struct, lim_dist):
 
     # get the lattice parameters and the smallest parameter
     lattice_parameters = struct.lattice.abc
-    max_parameter = min(lattice_parameters)
+    min_parameter = min(lattice_parameters)
 
-    # find the minimum supercell to consider all the connections for the given limit distance
-    n_supercell = 2
-    param_supercell = max_parameter
+    # find the minimum supercell (with central cell, n=3,5,...) to consider all the connections for the given limit distance
+    n_supercell = 3
+    param_supercell = min_parameter
     while param_supercell < lim_dist:
-        n_supercell = n_supercell + 1
-        param_supercell = max_parameter*(n_supercell - 1) 
+        n_supercell = n_supercell + 2
+        param_supercell = min_parameter*(n_supercell - 2) 
+
+    # number for the atoms in the centered cell after creating a supercell
+    atoms_centered_cell = math.trunc((n_supercell**3)/2) + 1
 
     # get the number of atoms in the unit cell
     atoms_number = struct.num_sites
@@ -87,9 +90,9 @@ def get_edges(struct, lim_dist):
     # check if there is a connection between two atoms (count just one of the directions, example: just (0,2), not (0,2) and (2,0))
     for atom in range(atoms_number):
         for atom_super in range(atoms_supercell_number - atom*(n_supercell**3)):
-            a_cell = (supercell.sites[atom*(n_supercell**3)]).coords[0]
-            b_cell = (supercell.sites[atom*(n_supercell**3)]).coords[1]
-            c_cell = (supercell.sites[atom*(n_supercell**3)]).coords[2]
+            a_cell = (supercell.sites[atom*(n_supercell**3) + atoms_centered_cell]).coords[0]
+            b_cell = (supercell.sites[atom*(n_supercell**3) + atoms_centered_cell]).coords[1]
+            c_cell = (supercell.sites[atom*(n_supercell**3) + atoms_centered_cell]).coords[2]
 
             a_super = (supercell.sites[atom_super + atom*(n_supercell**3)]).coords[0]
             b_super = (supercell.sites[atom_super + atom*(n_supercell**3)]).coords[1]
