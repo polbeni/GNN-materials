@@ -11,7 +11,6 @@ import glob
 # pytorch and torch geometric modules
 import torch
 from torch_geometric.data import Data
-from torch_geometric.transforms import NormalizeScale
 
 # create an object to save all the graphs
 graphs = []
