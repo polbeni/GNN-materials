@@ -8,6 +8,8 @@
 
 # Official Materials Project API documentation: https://docs.materialsproject.org/downloading-data/using-the-api/examples
 
+import os
+import shutil
 
 from mp_api.client import MPRester
 from pymatgen.io.vasp.inputs import Poscar
@@ -23,6 +25,11 @@ with MPRester(api_key) as mpr:
 
 # declare the type of file you want to save the structures (cif or POSCAR)
 file_fmt = 'cif'
+
+# create a folder to storage the structures
+if os.path.exists('structures'):
+    shutil.rmtree('structures')
+os.mkdir('structures')
     
 # create a file with the id of the material and their band gap    
 materials_file = open('materials.txt', 'w')
