@@ -1,3 +1,8 @@
+# Pol Benítez Colominas, February 2024 - March 2024
+# Universitat Politècnica de Catalunya
+
+# Generates a file with the id of the material and its band gap value
+
 import csv
 
 discarted = []
