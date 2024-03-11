@@ -25,7 +25,7 @@ with open('materials.txt', 'r') as file:
         bg = line.split()[1]
 
         if struct not in discarted:
-            structures.append(struct + '.cif')
+            structures.append(struct)
             bandgaps.append(bg)
 
 with open('graphs-bg.csv', 'w', newline='') as file:
