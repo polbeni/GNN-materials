@@ -1,4 +1,4 @@
-# Pol Benítez Colominas, January 2024 - February 2024
+# Pol Benítez Colominas, January 2024 - March 2024
 # Universitat Politècnica de Catalunya
 
 # Code to generate graphs from unit cell structure files (as cif or POSCAR files)
@@ -125,6 +125,14 @@ def get_edges(struct, lim_dist):
 # define the maximum longitude to consider edge connections (angstroms)
 edge_radius = 5.5   
 
+# create a dictionary with materials id and bandgaps
+materials_dict = {}
+with open('materials.txt', 'r') as file:
+    next(file)
+
+    for line in file:
+        materials_dict[line.split()[0] + '.cif'] = float(line.split()[1])
+
 # create a list with all the structures that we want transform to a graph (in this case cif files with name mp-#.cif)
 structures_path = 'structures/'
 structures_list = glob.glob(f'{structures_path}mp-*')
@@ -175,7 +183,9 @@ for struc_path in structures_list:
 
     # save the structures in torch geometric files (if they are not corrupt)
     if discarted == False:
-        data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch)
+        bg = materials_dict[os.path.basename(struc_path)]
+
+        data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch, y=torch.tensor([float(bg)]))
 
         path_to_save = struc_path.split('/')[1].split('.')[0]
 
