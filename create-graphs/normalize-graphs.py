@@ -11,6 +11,7 @@ import glob
 # pytorch and torch geometric modules
 import torch
 from torch_geometric.data import Data
+from torch_geometric.transforms import NormalizeScale
 
 # create an object to save all the graphs
 graphs = []
@@ -70,8 +71,9 @@ for graph in graphs:
     normalized_x = (node_features[node_idx: node_idx + num_nodes]).clone().detach()
     normalized_edge_attr = (edge_features[edge_idx: edge_idx + num_edges]).clone().detach()
     normalized_edge_index = (graph.edge_index).clone().detach()
+    y_data = (graph.y).clone().detach()
 
-    normalized_graph = Data(x=normalized_x, edge_attr=normalized_edge_attr, edge_index=normalized_edge_index)
+    normalized_graph = Data(x=normalized_x, edge_attr=normalized_edge_attr, edge_index=normalized_edge_index, y=y_data)
 
     node_idx = node_idx + num_nodes
     edge_idx = edge_idx + num_edges
