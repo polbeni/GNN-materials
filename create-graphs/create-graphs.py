@@ -1,4 +1,4 @@
-# Pol Benítez Colominas, January 2024 - March 2024
+# Pol Benítez Colominas, January 2024 - April 2024
 # Universitat Politècnica de Catalunya
 
 # Code to generate graphs from unit cell structure files (as cif or POSCAR files)
@@ -49,8 +49,8 @@ def get_edges(struct, lim_dist):
     """
     This function recives a unit cell structure (pymatgen structure object) and returns the adjacency list, i.e., 
     a list of pairs of nodes that are closer than the desired distance, and the edges list, i.e, a list with the 
-    features of each element of the adjecent list, here the distance x, y and z (cartesian coordinates) for the 
-    connection. In order to do this a proper supercell is created
+    features of each element of the adjecent list, here the euclidean distance. In order to do this a proper 
+    supercell is created
 
     Inputs:
         struct: structure object
@@ -103,10 +103,7 @@ def get_edges(struct, lim_dist):
             if (euclidean_distance <= lim_dist) and (euclidean_distance > 1e-5): 
                 edge_pair = [atom, math.trunc((atom_super + atom*(n_supercell**3))/(n_supercell**3))]
 
-                a_dist = abs(a_cell - a_super)
-                b_dist = abs(b_cell - b_super)
-                c_dist = abs(c_cell - c_super)
-                edge_feature = [a_dist, b_dist, c_dist]
+                edge_feature = [euclidean_distance]
 
                 # chech if it is self-loop, if not save twice to be undirected
                 if edge_pair[0] != edge_pair[1]:
