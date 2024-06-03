@@ -29,16 +29,17 @@ else:
 
 
 # Define the machine learning model parameters
-num_epochs = 100
+num_epochs = 500
 batch_size = 256
 learning_rate = 1e-3
-dropout = 0.5
+train_set_size = 0.7
+dropout = 0.5 
 
 
 # Load the normalized graphs and save them in an array
 file_list = []
 
-with open('graphs-bg.csv', 'r') as csv_file:
+with open('/home/pol/Documents/work/crystal-graph-neural-networks/cgnn-one-edge-feature/graphs-bg.csv', 'r') as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
     for row in csv_reader:
@@ -46,9 +47,9 @@ with open('graphs-bg.csv', 'r') as csv_file:
 
 dataset_graphs = []
 
-path_data = 'normalized_graphs/'
+path_data = '/home/pol/Documents/work/crystal-graph-neural-networks/cgnn-one-edge-feature/normalized_graphs/'
 
-df_materials = pd.read_csv('graphs-bg.csv')
+df_materials = pd.read_csv('/home/pol/Documents/work/crystal-graph-neural-networks/cgnn-one-edge-feature/graphs-bg.csv')
 
 for filename in file_list:
     data = torch.load(path_data + filename + '.pt')
@@ -60,19 +61,25 @@ print(f'A total of {len(dataset_graphs)} graphs loaded.')
 # Normalize the outputs
 outputs_graphs = torch.cat([graph.y for graph in dataset_graphs], dim=0)
 
-mean_output = outputs_graphs.mean(dim=0)
-std_output = outputs_graphs.std(dim=0)
-outputs_graphs = (outputs_graphs - mean_output)/std_output
+max_output = outputs_graphs.max(dim=0).values
+min_output = outputs_graphs.min(dim=0).values
+outputs_graphs = (outputs_graphs - min_output)/(max_output - min_output)
 
-print(f'Normalization of output, mean value: {mean_output}, standard deviation: {std_output}')
+print(f'Normalization of output, max value: {max_output}, min value: {min_output}')
 output_normalization = open('output_normalization.txt', 'w')
-output_normalization.write('mean_output  std_output\n')
-output_normalization.write(f'{mean_output}  {std_output}')
+output_normalization.write('max_output  min_output\n')
+output_normalization.write(f'{max_output}  {min_output}')
 output_normalization.close()
+
+num_struc = 0
+for graph in dataset_graphs:
+    graph.y = outputs_graphs[num_struc]
+
+    num_struc = num_struc + 1
 
 
 # Define the size of the train and test set
-train_size = int(0.9 * len(dataset_graphs))
+train_size = int(train_set_size * len(dataset_graphs))
 test_size  = len(dataset_graphs) - train_size
 
 print(f'The train set contains {train_size} graphs')
@@ -80,7 +87,7 @@ print(f'The test set contains {test_size} graphs')
 
 
 # Create the train and test sets
-train_dataset, test_dataset = torch.utils.data.random_split(dataset_graphs, [train_size, test_size])
+train_dataset, test_dataset = torch.utils.data.random_split(dataset_graphs, [train_size, test_size], generator=torch.Generator().manual_seed(42))
 
 
 # Generate the train and test loaders
@@ -96,7 +103,7 @@ class GCNN(torch.nn.Module):
 
     def __init__(self, features_channels, hidden_channels):
         super(GCNN, self).__init__()
-        torch.manual_seed(12345)
+        torch.manual_seed(12346)
 
         # Convolution layers
         self.conv1 = GraphConv(features_channels, hidden_channels)
@@ -112,17 +119,17 @@ class GCNN(torch.nn.Module):
         x = self.conv1(x, edge_index, edge_attr)
         x = x.relu()
         x = self.conv2(x, edge_index, edge_attr)
+        x = x.relu()
 
         # Mean pooling to reduce dimensionality
         x = global_mean_pool(x, batch)  
 
         # Apply neural network for regression prediction problem
 
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=dropout, training=self.training)
         x = self.lin1(x)
         x = x.relu()
         x = self.lin2(x)
-        x = x.relu()
 
         return x
     
@@ -219,8 +226,8 @@ for epoch in range(num_epochs):
 plt.figure()
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.plot(np.linspace(1, num_epochs, num_epochs), train_losses, label='train')
-plt.plot(np.linspace(1, num_epochs, num_epochs), test_losses, label='test')
+plt.plot(np.linspace(1, num_epochs, num_epochs-1), train_losses[1:], label='train')
+plt.plot(np.linspace(1, num_epochs, num_epochs-1), test_losses[1:], label='test')
 plt.legend()
 plt.tight_layout()
 plt.savefig('loss_plot.pdf')
@@ -237,7 +244,7 @@ model.eval()
 for num_graph in range(len(train_dataset)):
     graph = train_dataset[num_graph]
 
-    real_value_train.append(graph.y[0])
+    real_value_train.append(graph.y*(max_output - min_output) + min_output)
 
     graph.x = graph.x.to(device).float()
     graph.edge_index = graph.edge_index.to(device).long()
@@ -253,13 +260,13 @@ for num_graph in range(len(train_dataset)):
 
     # Convert prediction to CPU if necessary
     prediction = prediction.cpu()
-    predicted_value_train.append(prediction[0][0])
+    predicted_value_train.append(prediction[0][0]*(max_output - min_output) + min_output)
 
 
 for num_graph in range(len(test_dataset)):
     graph = test_dataset[num_graph]
 
-    real_value_test.append(graph.y[0])
+    real_value_test.append(graph.y*(max_output - min_output) + min_output)
 
     graph.x = graph.x.to(device).float()
     graph.edge_index = graph.edge_index.to(device).long()
@@ -277,17 +284,17 @@ for num_graph in range(len(test_dataset)):
 
     # Convert prediction to CPU if necessary
     prediction = prediction.cpu()
-    predicted_value_test.append(prediction[0][0])
+    predicted_value_test.append(prediction[0][0]*(max_output - min_output) + min_output)
 
 plt.figure()
 plt.xlabel('DFT computed band gap (eV)')
 plt.ylabel('Predicted band gap (eV)')
-max_value = max(np.max(real_value_train), np.max(real_value_test), np.max(predicted_value_train), np.max(predicted_value_test))
-plt.xlim(0, max_value)
-plt.ylim(0, max_value)
+#max_value = max(np.max(real_value_train), np.max(real_value_test), np.max(predicted_value_train), np.max(predicted_value_test))
+plt.xlim(0, 8)
+plt.ylim(0, 8)
 plt.plot(real_value_train[:], predicted_value_train[:], linestyle='', marker='o', alpha=0.6, color='lightsteelblue', label='train')
 plt.plot(real_value_test[:], predicted_value_test[:], linestyle='', marker='o', alpha=0.6, color='salmon', label='test')
-plt.plot([0,max_value], [0,max_value], linestyle='--', color='royalblue')
+plt.plot([0, 8], [0, 8], linestyle='--', color='royalblue')
 plt.legend()
 plt.tight_layout()
 plt.savefig('predictions_plot.pdf')
@@ -301,18 +308,18 @@ mae_train = mean_absolute_error(real_value_train,predicted_value_train)
 mae_test = mean_absolute_error(real_value_test,predicted_value_test)
 
 metrics_file = open('metrics.txt', 'w')
-metrics_file.write('Mean Squared Error (MSE) and Mean Absolute Error (MAE) metrics for train and test set:')
-metrics_file.write(f'MSE train:   {mse_train}')
-metrics_file.write(f'MSE test:    {mse_test}')
-metrics_file.write(f'MAE train:   {mae_train}')
-metrics_file.write(f'MAE test:    {mae_test}')
-metrics_file.write('')
-metrics_file.write('')
-metrics_file.write('Train and test loss after each epoch:')
+metrics_file.write('Mean Squared Error (MSE) and Mean Absolute Error (MAE) metrics for train and test set:\n')
+metrics_file.write(f'MSE train:   {mse_train}\n')
+metrics_file.write(f'MSE test:    {mse_test}\n')
+metrics_file.write(f'MAE train:   {mae_train}\n')
+metrics_file.write(f'MAE test:    {mae_test}\n')
+metrics_file.write('\n')
+metrics_file.write('\n')
+metrics_file.write('Train and test loss after each epoch:\n')
 for epoch in range(num_epochs):
-    metrics_file.write(f'Epoch {epoch + 1} of a total of {num_epochs}')
-    metrics_file.write(f'     Train loss:   {train_losses[epoch]}')
-    metrics_file.write(f'     Test loss:    {test_losses[epoch]}')
+    metrics_file.write(f'Epoch {epoch + 1} of a total of {num_epochs}\n')
+    metrics_file.write(f'     Train loss:   {train_losses[epoch]}\n')
+    metrics_file.write(f'     Test loss:    {test_losses[epoch]}\n')
 metrics_file.close()
 
 
