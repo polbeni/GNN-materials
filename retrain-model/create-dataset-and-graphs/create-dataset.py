@@ -1,8 +1,3 @@
-# Pol Benítez Colominas, June 2024
-# Universitat Politècnica de Catalunya
-
-# Code to generate CAP dataset from DFT computations
-
 from pymatgen.io.vasp import Poscar
 from pymatgen.io.cif import CifWriter
 
@@ -81,7 +76,7 @@ for num in range(246):
         cif_writer.write_file(cif_filename)
 
 
-        materials.write(f'cap-{str(num+1).zfill(4)}.cif       {bandgap}\n')
+        materials.write(f'cap-{str(num+1).zfill(4)}       {bandgap}\n')
 
         print(f'Phase generated {num+1} of a total of 246')
     else:

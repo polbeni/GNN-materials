@@ -128,7 +128,7 @@ with open('materials.txt', 'r') as file:
     next(file)
 
     for line in file:
-        materials_dict[line.split()[0]] = float(line.split()[1])
+        materials_dict[line.split()[0] + '.cif'] = float(line.split()[1])
 
 # create a list with all the structures that we want transform to a graph (in this case cif files with name mp-#.cif)
 structures_path = 'CAP-structures/'
