@@ -204,7 +204,7 @@ def predict_bg(path):
     with torch.no_grad():
         prediction = model(graph.x, graph.edge_index, graph.edge_attr, graph.batch)
 
-    bg = prediction*(max_output - min_output) + min_output
+    bg = float(prediction)*(max_output - min_output) + min_output
 
     return bg
 
