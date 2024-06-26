@@ -29,11 +29,11 @@ else:
 
 
 # Define the machine learning model parameters
-num_epochs = 500
+num_epochs = 1500
 batch_size = 16
 hidden = 256
 learning_rate = 1e-3
-train_set_size = 0.7
+train_set_size = 0.75
 dropout = 0.5 
 
 
@@ -62,8 +62,8 @@ print(f'A total of {len(dataset_graphs)} graphs loaded.')
 # Normalize the outputs
 outputs_graphs = torch.cat([graph.y for graph in dataset_graphs], dim=0)
 
-max_output = outputs_graphs.max(dim=0).values
-min_output = outputs_graphs.min(dim=0).values
+max_output = 6.950200080871582
+min_output = 0.05009999871253967
 outputs_graphs = (outputs_graphs - min_output)/(max_output - min_output)
 
 print(f'Normalization of output, max value: {max_output}, min value: {min_output}')
@@ -230,8 +230,8 @@ for epoch in range(num_epochs):
 plt.figure()
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.plot(np.linspace(1, num_epochs, num_epochs-1), train_losses[1:], label='train')
-plt.plot(np.linspace(1, num_epochs, num_epochs-1), test_losses[1:], label='test')
+plt.plot(np.linspace(1, num_epochs, num_epochs), train_losses[:], label='train')
+plt.plot(np.linspace(1, num_epochs, num_epochs), test_losses[:], label='test')
 plt.legend()
 plt.tight_layout()
 plt.savefig('loss_plot.pdf')

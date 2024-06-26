@@ -35,13 +35,13 @@ node_features = torch.cat([graph.x for graph in graphs], dim=0)
 edge_features = torch.cat([graph.edge_attr for graph in graphs], dim=0)
 
 # normalize node features
-max_node = node_features.max(dim=0).values
-min_node = node_features.min(dim=0).values
+max_node = torch.tensor([ 88.0000,   3.9800, 244.0000, 298.0000])
+min_node = torch.tensor([ 0.0000,  0.7900,  1.0080, 42.0000])
 node_features = (node_features - min_node)/(max_node - min_node)
 
 # normalize edge features
-max_edge = edge_features.max(dim=0).values
-min_edge = edge_features.min(dim=0).values
+max_edge = 5.5000
+min_edge = 0.6932
 edge_features = (edge_features - min_edge)/(max_edge - min_edge)
 
 # save the normalization values for future data
