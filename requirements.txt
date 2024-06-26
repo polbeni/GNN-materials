@@ -3,6 +3,6 @@ pymatgen
 matplotlib
 numpy
 pandas
-sklearn
+scikit-learn
 torch
 torch_geometric
