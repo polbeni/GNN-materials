@@ -1,0 +1,8 @@
+mp-api
+pymatgen
+matplotlib
+numpy
+pandas
+sklearn
+torch
+torch_geometric
