@@ -80,11 +80,6 @@ $ python3 cgnn-model.py
 ```
 The provided outputs are: a file with the final errors and epoch losses, a plot with the evolution of the losses, a plot with the prediction results, and a file with the trained model named `convolutional-graph-neural-networks/trained_model`.
 
-Alternatively, if you want to train the model with normalized output, you can do:
-```bash
-$ python3 cgnn-model-normalized-output.py
-```
-
 To re-train the model with new DFT data, use the script in the `retrain-model` directory:
 ```bash
 $ python3 cgnn-retrain.py
