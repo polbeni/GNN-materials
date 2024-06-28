@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from torch.nn import Linear
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GraphConv
-from torch_geometric.nn import global_mean_pool
+from torch_geometric.nn import global_mean_pool, global_max_pool
 
 
 # Check if a GPU is available
@@ -29,12 +29,12 @@ else:
 
 
 # Define the machine learning model parameters
-num_epochs = 1500
-batch_size = 16
+num_epochs = 1000
+batch_size = 8
 hidden = 256
 learning_rate = 1e-3
-train_set_size = 0.75
-dropout = 0.5 
+train_set_size = 0.7
+dropout = 0.6 
 
 
 # Load the normalized graphs and save them in an array
@@ -62,8 +62,8 @@ print(f'A total of {len(dataset_graphs)} graphs loaded.')
 # Normalize the outputs
 outputs_graphs = torch.cat([graph.y for graph in dataset_graphs], dim=0)
 
-max_output = 6.950200080871582
-min_output = 0.05009999871253967
+max_output = outputs_graphs.max(dim=0).values
+min_output = outputs_graphs.min(dim=0).values
 outputs_graphs = (outputs_graphs - min_output)/(max_output - min_output)
 
 print(f'Normalization of output, max value: {max_output}, min value: {min_output}')
@@ -109,6 +109,11 @@ class GCNN(torch.nn.Module):
         # Convolution layers
         self.conv1 = GraphConv(features_channels, hidden_channels)
         self.conv2 = GraphConv(hidden_channels, hidden_channels)
+        self.conv3 = GraphConv(hidden_channels, hidden_channels)
+
+        self.bn1 = torch.nn.BatchNorm1d(hidden_channels)
+        self.bn2 = torch.nn.BatchNorm1d(hidden_channels)
+        self.bn3 = torch.nn.BatchNorm1d(hidden_channels)
 
         # Linear layers
         self.lin1 = Linear(hidden_channels, 16)
@@ -118,12 +123,17 @@ class GCNN(torch.nn.Module):
 
         # Node embedding
         x = self.conv1(x, edge_index, edge_attr)
+        x = self.bn1(x)
         x = x.relu()
         x = self.conv2(x, edge_index, edge_attr)
+        x = self.bn2(x)
+        x = x.relu()
+        x = self.conv3(x, edge_index, edge_attr)
+        x = self.bn3(x)
         x = x.relu()
 
         # Mean pooling to reduce dimensionality
-        x = global_mean_pool(x, batch)  
+        x = global_max_pool(x, batch)  
 
         # Apply neural network for regression prediction problem
 
@@ -131,6 +141,7 @@ class GCNN(torch.nn.Module):
         x = self.lin1(x)
         x = x.relu()
         x = self.lin2(x)
+        x = x.sigmoid()
 
         return x
     
@@ -294,8 +305,8 @@ plt.figure()
 plt.xlabel('DFT computed band gap (eV)')
 plt.ylabel('Predicted band gap (eV)')
 #max_value = max(np.max(real_value_train), np.max(real_value_test), np.max(predicted_value_train), np.max(predicted_value_test))
-plt.xlim(0, 3)
-plt.ylim(0, 3)
+plt.xlim(0, 2.2)
+plt.ylim(0, 2.2)
 plt.plot(real_value_train[:], predicted_value_train[:], linestyle='', marker='o', alpha=0.6, color='lightsteelblue', label='train')
 plt.plot(real_value_test[:], predicted_value_test[:], linestyle='', marker='o', alpha=0.6, color='salmon', label='test')
 plt.plot([0, 3], [0, 3], linestyle='--', color='royalblue')
