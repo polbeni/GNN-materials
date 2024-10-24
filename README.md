@@ -1,9 +1,9 @@
-# Crystal Graph Neural Networks (CGNNs) for materials properties prediction
+# Crystal Graph Convolutional Neural Networks (CGCNNs) for materials properties prediction
 Doing materials calculations with first-principles methods like Density Functional Theory (DFT) is computationally expensive, usually requiring supercomputing clusters and large time frames to compute. Machine learning methods arise as an interesting alternative to speed up these calculations in certain contexts. For example, we could use classification machine learning techniques to predict if a molecule is toxic or non-toxic, or if a given material is an insulator or conductor. Another use could be for regression problems, such as predicting energies for a given structure of a crystal material.
 
 We are interested in being able to predict band gaps to account for the thermal effect on the band gap in some novel semiconductor materials. These computations require hundreds of thousands of hours of computation; thus, using machine learning prediction models, we could speed up these calculations.
 
-The main problem is how to express the information of the unit cell (lattice parameters and ion positions) in a way that we can feed into a machine learning method. For now, the best alternative is to use Crystal Graph Neural Networks (CGNNs) [[1]](#1). Historically, molecules were mapped to graph structures for quantum chemistry machine learning applications. However, mapping a unit cell of crystal material to a graph is not as easy. The main problem is how to express the periodicity of the cell (molecules do not have this problem).
+The main problem is how to express the information of the unit cell (lattice parameters and ion positions) in a way that we can feed into a machine learning method. For now, the best alternative is to use Crystal Graph Convolutional Neural Networks (CGCNNs) [[1]](#1). Historically, molecules were mapped to graph structures for quantum chemistry machine learning applications. However, mapping a unit cell of crystal material to a graph is not as easy. The main problem is how to express the periodicity of the cell (molecules do not have this problem).
 
 In this approach, we generate graphs with as many nodes as there are atoms in the unit cell. Each node has four different features: atomic number, electronegativity, ion weight (in u), and ion radius (in pm). To account for the periodicity of the unit cell, we consider that two nodes $i$ and $j$ are connected by an edge if their Euclidean distance is less than a cutoff radius (typically a few angstroms), i.e., if $d_{i,j} < R_{cutoff}$. For each atom in the unit cell, it is verified if the other atoms are inside a sphere of radius $R_{cutoff}$ centered on the atom of interest. A supercell big enough is created to account for all the possible connections inside the cutoff sphere. The edge feature will be the Euclidean distance.
 
@@ -73,7 +73,7 @@ respectively.
 
 After normalization (or standardization), output files with the normalization (or standardization) values are generated to be used later, such as when re-training the model with new data or predicting new materials.
 
-### Create and train the CGNN model
+### Create and train the CGCNN model
 The next step is to create a graph convolutional neural network model and train it. We used [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/). Go to the `convolutional-graph-neural-networks` directory and edit `convolutional-graph-neural-networks/cgnn-model.py` with the desired parameters for the training (training set size, learning rate, number of epochs, etc.) as well as the model architecture, then execute the file:
 ```bash
 $ python3 cgnn-model.py
