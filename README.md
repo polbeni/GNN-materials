@@ -15,7 +15,7 @@ Once we have the graphs, convolutional graph neural networks are used to perform
 To download the repository, use:
 
 ```bash
-$ git clone https://github.com/polbeni/cgnn
+$ git clone https://github.com/polbeni/cgcnn
 ```
 
 ## Requirments
