@@ -184,7 +184,7 @@ for struc_path in structures_list:
 
         data = Data(x=nodes_torch, edge_index=adjacency_torch.t().contiguous(), edge_attr=edges_torch, y=torch.tensor([float(bg)]))
 
-        path_to_save = struc_path.split('/')[1].split('.')[0]
+        path_to_save = struc_path.split('/')[-1].split('.')[0]
 
         torch.save(data, 'graph_structures/' + path_to_save + '.pt')
     
