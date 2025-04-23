@@ -1,4 +1,4 @@
-# Pol Benítez Colominas, March 2024 - February 2025
+# Pol Benítez Colominas, March 2024 - April 2025
 # Universitat Politècnica de Catalunya
 
 # Crystal Graph Convolutional Neural Network (CGCNN) model for band gap prediction
@@ -99,7 +99,7 @@ train_dataset, test_dataset = torch.utils.data.random_split(dataset_graphs, [tra
 
 # Generate the train and test loaders
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
 # Define the CGNN model
