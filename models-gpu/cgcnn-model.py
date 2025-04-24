@@ -1,8 +1,11 @@
 # Pol Benítez Colominas, March 2024 - April 2025
 # Universitat Politècnica de Catalunya
 
-# Crystal Graph Convolutional Neural Network (CGCNN) model for band gap prediction
+# Trains a Crystal Graph Convolutional Neural Network (CGCNN) model for band gap prediction (regression problem)
 
+
+
+################################# LIBRARIES ###############################
 import csv
 
 import matplotlib.pyplot as plt
@@ -17,99 +20,38 @@ from torch.nn import Linear
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GraphConv
 from torch_geometric.nn import global_mean_pool, global_max_pool
+###########################################################################
 
 
-# Check if a GPU (CUDA) is available 
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-    print("GPU is available. Using GPU.")
-## IMPORTANT: does not work for MPS (mac)
-#elif torch.backends.mps.is_available():
-#    device = torch.device('mps')
-#    print("GPU not available. Using MPS (mac).")
-#    torch.set_default_dtype(torch.float32)
-else:
-    device = torch.device('cpu')
-    print("GPU not available. Using CPU.")
+
+################################ PARAMETERS ###############################
+num_epochs = 10                                                         # Number of epochs in the training
+learning_rate = 5e-4                                                    # Value of the learning rate step
+batch_size = 128                                                        # Number of samples in the batch
+train_set_size = 0.8                                                    # Fraction of the trainin set size
+hidden = 256                                                            # Number of hidden channels in the convolutional layers
+dropout = 0.6                                                           # Fraction of elements to dropout
+
+path_to_graphs = '../materials-dataset-new/normalized_graphs/'          # Path to the normalized graphs
+path_to_csv = '../materials-dataset-new/graphs-bg.csv'                  # Path to csv file with graphs names and value
+
+model_path = 'trained_model'                                            # Path or name of the final trained model
+
+seed_splitting = 42                                                     # Seed for the splitting of the training and test sets
+seed_model_torch = 12345                                                # Seed for the model
+###########################################################################
 
 
-# Define the machine learning model parameters
-num_epochs = 10
-batch_size = 128
-hidden = 256
-learning_rate = 1e-3
-train_set_size = 0.8
-dropout = 0.6 
 
-
-# Load the normalized graphs and save them in an array
-file_list = []
-
-with open('../materials-dataset-new/graphs-bg.csv', 'r') as csv_file:
-    csv_reader = csv.reader(csv_file)
-    next(csv_reader)
-    for row in csv_reader:
-        file_list.append(row[0])
-
-dataset_graphs = []
-
-path_data = '../materials-dataset-new/normalized_graphs/'
-
-df_materials = pd.read_csv('../materials-dataset-new/graphs-bg.csv')
-
-for filename in file_list:
-    data = torch.load(path_data + filename + '.pt')
-    dataset_graphs.append(data)
-
-print(f'A total of {len(dataset_graphs)} graphs loaded.')
-
-
-# Normalize the outputs
-outputs_graphs = torch.cat([graph.y for graph in dataset_graphs], dim=0)
-
-max_output = outputs_graphs.max(dim=0).values
-min_output = outputs_graphs.min(dim=0).values
-outputs_graphs = (outputs_graphs - min_output)/(max_output - min_output)
-
-print(f'Normalization of output, max value: {max_output}, min value: {min_output}')
-output_normalization = open('output_normalization.txt', 'w')
-output_normalization.write('max_output  min_output\n')
-output_normalization.write(f'{max_output}  {min_output}')
-output_normalization.close()
-
-num_struc = 0
-for graph in dataset_graphs:
-    graph.y = outputs_graphs[num_struc]
-
-    num_struc = num_struc + 1
-
-
-# Define the size of the train and test set
-train_size = int(train_set_size * len(dataset_graphs))
-test_size  = len(dataset_graphs) - train_size
-
-print(f'The train set contains {train_size} graphs')
-print(f'The test set contains {test_size} graphs')
-
-
-# Create the train and test sets
-train_dataset, test_dataset = torch.utils.data.random_split(dataset_graphs, [train_size, test_size], generator=torch.Generator().manual_seed(42))
-
-
-# Generate the train and test loaders
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-
-# Define the CGNN model
-class GCNN(torch.nn.Module):
+########################## MODEL ARCHITECTURE #############################
+class CGCNN(torch.nn.Module):
     """
     Graph Convolution Neural Network model
     """
 
-    def __init__(self, features_channels, hidden_channels):
-        super(GCNN, self).__init__()
-        torch.manual_seed(12346)
+    def __init__(self, features_channels, hidden_channels, seed_model):
+        super(CGCNN, self).__init__()
+        torch.manual_seed(seed_model)
 
         # Convolution layers
         self.conv1 = GraphConv(features_channels, hidden_channels)
@@ -149,22 +91,16 @@ class GCNN(torch.nn.Module):
         x = x.sigmoid()
 
         return x
-    
-model = GCNN(features_channels=dataset_graphs[0].num_node_features, hidden_channels=hidden)
-
-model = model.to(device)
-print(model)
+###########################################################################
 
 
-# Define the optimizer and criterion
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-criterion = torch.nn.MSELoss()
 
-
-# Define functions to train the model with the train set and evaluate its performance over the train and test sets
+################################ FUNCTIONS ################################
 def train(model, criterion, train_loader, optimizer):
     """
-    Train the model with the train set
+    Determines the loss for the train batch and optimize the model
+
+    Inputs:
     """
 
     model.train()
@@ -225,9 +161,90 @@ def test(model, criterion, test_loader):
     average_loss = total_loss / len(test_loader)
 
     return average_loss, all_predictions, all_ground_truths
+###########################################################################
 
 
-# Loop over the epochs to train the model
+
+################################### MAIN ##################################
+# Check if a GPU (CUDA) is available 
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+    print("GPU is available. Using GPU.")
+else:
+    device = torch.device('cpu')
+    print("GPU not available. Using CPU.")
+
+
+# Load the normalized graphs and save them in an array
+file_list = []
+
+with open(path_to_csv, 'r') as csv_file:
+    csv_reader = csv.reader(csv_file)
+    next(csv_reader)
+    for row in csv_reader:
+        file_list.append(row[0])
+
+dataset_graphs = []
+
+df_materials = pd.read_csv(path_to_csv)
+
+for filename in file_list:
+    data = torch.load(path_to_graphs + filename + '.pt')
+    dataset_graphs.append(data)
+
+print(f'A total of {len(dataset_graphs)} graphs loaded.')
+
+
+# Normalize the outputs and save the normalization constants in a file
+outputs_graphs = torch.cat([graph.y for graph in dataset_graphs], dim=0)
+
+max_output = outputs_graphs.max(dim=0).values
+min_output = outputs_graphs.min(dim=0).values
+outputs_graphs = (outputs_graphs - min_output)/(max_output - min_output)
+
+print(f'Normalization of output, max value: {max_output}, min value: {min_output}')
+output_normalization = open('output_normalization.txt', 'w')
+output_normalization.write('max_output  min_output\n')
+output_normalization.write(f'{max_output}  {min_output}')
+output_normalization.close()
+
+num_struc = 0
+for graph in dataset_graphs:
+    graph.y = outputs_graphs[num_struc]
+
+    num_struc = num_struc + 1
+
+
+# Define the size of the train and test set
+train_size = int(train_set_size * len(dataset_graphs))
+test_size  = len(dataset_graphs) - train_size
+
+print(f'The train set contains {train_size} graphs')
+print(f'The test set contains {test_size} graphs')
+
+
+# Create the train and test sets
+train_dataset, test_dataset = torch.utils.data.random_split(dataset_graphs, [train_size, test_size], generator=torch.Generator().manual_seed(seed_splitting))
+
+
+# Generate the train and test loaders
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+
+# Create the model
+model = CGCNN(features_channels=dataset_graphs[0].num_node_features, hidden_channels=hidden, seed_model=seed_model_torch)
+
+model = model.to(device)
+print(model)
+
+
+# Define the optimizer and criterion
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+criterion = torch.nn.MSELoss()
+
+
+# Loop over the epochs to train the model and compute losses
 train_losses = []
 test_losses = []
 
@@ -242,6 +259,19 @@ for epoch in range(num_epochs):
     print(f'Epoch {epoch + 1} of a total of {num_epochs}')
     print(f'     Train loss:   {train_loss}')
     print(f'     Test loss:    {test_loss}')
+
+
+# Save the trained model
+torch.save(model.state_dict(), model_path)
+###########################################################################
+
+
+
+
+
+
+
+
 
 
 # Plot the train/test loss with epochs
@@ -347,6 +377,12 @@ for epoch in range(num_epochs):
 metrics_file.close()
 
 
-# Save the model
-model_path = 'trained_model'
-torch.save(model.state_dict(), model_path)
+
+
+
+
+
+
+
+
+
