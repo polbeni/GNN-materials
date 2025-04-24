@@ -98,17 +98,21 @@ class CGCNN(torch.nn.Module):
 ################################ FUNCTIONS ################################
 def train(model, criterion, train_loader, optimizer):
     """
-    Determines the loss for the train batch and optimize the model
+    Determines the loss for the train and optimize the model
 
     Inputs:
+        model: model to use in the training
+        criterion: loss function
+        train_loader: batched train data
+        optimizer: optimization algorithm for the training
     """
 
     model.train()
-    total_loss = 0
-    all_predictions = []
-    all_ground_truths = []
 
-    for data in train_loader:  # Iterate in batches over the training dataset
+    total_loss = 0
+
+    # Iterate in batches over the training dataset
+    for data in train_loader:  
         # Ensure tensors are on the right device and dtype
         data.x = data.x.to(device).float()
         data.edge_index = data.edge_index.to(device).long()
@@ -123,26 +127,30 @@ def train(model, criterion, train_loader, optimizer):
         optimizer.step()
         optimizer.zero_grad()
 
-        total_loss += loss.item()
-        all_predictions.append(out.detach())
-        all_ground_truths.append(data.y.detach())
+        total_loss = total_loss + loss.item()
     
     average_loss = total_loss / len(train_loader)
 
-    return average_loss, all_predictions, all_ground_truths
+    return average_loss
 
 
 def test(model, criterion, test_loader):
     """
     Check the performance of the model over the test set
+
+    Inputs:
+        model: model to use in the training
+        criterion: loss function
+        test_loader: batched test data
     """
 
     model.eval()
+
     total_loss = 0
-    all_predictions = []
-    all_ground_truths = []
+
     with torch.no_grad():
-        for data in test_loader:  # Iterate in batches over the test dataset
+        # Iterate in batches over the test dataset
+        for data in test_loader:  
             # Ensure tensors are on the right device and dtype
             data.x = data.x.to(device).float()
             data.edge_index = data.edge_index.to(device).long()
@@ -154,13 +162,11 @@ def test(model, criterion, test_loader):
             out = model(data.x, data.edge_index, data.edge_attr, data.batch).to(device).squeeze(-1)
             loss = criterion(out, data.y)
 
-            total_loss += loss.item()
-            all_predictions.append(out)
-            all_ground_truths.append(data.y)
+            total_loss = total_loss + loss.item()
 
     average_loss = total_loss / len(test_loader)
 
-    return average_loss, all_predictions, all_ground_truths
+    return average_loss
 ###########################################################################
 
 
@@ -249,8 +255,8 @@ train_losses = []
 test_losses = []
 
 for epoch in range(num_epochs):
-    train_loss, train_predictions, train_ground_truths = train(model, criterion, train_loader, optimizer)
-    test_loss, test_predictions, test_ground_truths = test(model, criterion, test_loader)
+    train_loss = train(model, criterion, train_loader, optimizer)
+    test_loss = test(model, criterion, test_loader)
 
     # Append losses
     train_losses.append(train_loss)
