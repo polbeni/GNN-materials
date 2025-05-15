@@ -54,9 +54,11 @@ class CGCNN(torch.nn.Module):
     Graph Convolution Neural Network model
     """
 
-    def __init__(self, features_channels, hidden_channels, seed_model):
+    def __init__(self, features_channels, hidden_channels, seed_model, dropout):
         super(CGCNN, self).__init__()
         torch.manual_seed(seed_model)
+
+        self.dropout = dropout
 
         # Convolution layers
         self.conv1 = GraphConv(features_channels, hidden_channels)
@@ -89,7 +91,7 @@ class CGCNN(torch.nn.Module):
 
         # Apply neural network for regression prediction problem
 
-        x = F.dropout(x, p=dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.lin1(x)
         x = x.relu()
         x = self.lin2(x)
@@ -273,7 +275,7 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
 # Create the model
-model = CGCNN(features_channels=dataset_graphs[0].num_node_features, hidden_channels=hidden, seed_model=seed_model_torch)
+model = CGCNN(features_channels=dataset_graphs[0].num_node_features, hidden_channels=hidden, seed_model=seed_model_torch, dropout=dropout)
 
 model = model.to(device)
 print(model)
