@@ -1,4 +1,4 @@
-# Pol Benítez Colominas, March 2024 - April 2025
+# Pol Benítez Colominas, March 2024 - May 2025
 # Universitat Politècnica de Catalunya
 
 # Trains a Crystal Graph Convolutional Neural Network (CGCNN) model for band gap prediction (regression problem)
@@ -6,13 +6,16 @@
 
 
 ################################# LIBRARIES ###############################
+import os
 import csv
+import shutil
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, max_error
 
 import torch
 import torch.nn.functional as F
@@ -36,6 +39,8 @@ path_to_graphs = '../materials-dataset-new/normalized_graphs/'          # Path t
 path_to_csv = '../materials-dataset-new/graphs-bg.csv'                  # Path to csv file with graphs names and value
 
 model_path = 'trained_model'                                            # Path or name of the final trained model
+
+outputs_dir = 'outputs_file/'                                           # Path to dir where outputs are saved
 
 seed_splitting = 42                                                     # Seed for the splitting of the training and test sets
 seed_model_torch = 12345                                                # Seed for the model
@@ -167,6 +172,35 @@ def test(model, criterion, test_loader):
     average_loss = total_loss / len(test_loader)
 
     return average_loss
+
+
+def model_prediction(model, graph, norm_ct):
+    """
+    Returns the model prediction for a given graph
+
+    Inputs:
+        model: model to use in the prediction
+        graph: graph structure to make prediction
+        norm_ct: array with normalization constants with the format [min, max]
+    """
+
+    graph.x = graph.x.to(device).float()
+    graph.edge_index = graph.edge_index.to(device).long()
+    graph.edge_attr = graph.edge_attr.to(device).float()
+    graph.y = graph.y.to(device).float()
+
+    graph = graph.to(device)
+
+    model = model.to(device).float()
+
+    # Make prediction
+    with torch.no_grad():  # Disable gradient calculation for inference
+        prediction = model(graph.x, graph.edge_index, graph.edge_attr, graph.batch).to(device)
+
+    # Multiply the predicted value by the normalization constant
+    prediction_desnorm = prediction[0][0]*(norm_ct[1] - norm_ct[0]) + norm_ct[0]
+
+    return prediction_desnorm
 ###########################################################################
 
 
@@ -273,25 +307,64 @@ torch.save(model.state_dict(), model_path)
 
 
 
+################################## OUTPUTS ################################
+# Create the folder to save the outputs
+if os.path.exists(outputs_dir):
+    shutil.rmtree(outputs_dir)
+os.mkdir(outputs_dir)
 
 
+# Create data with basic information of our model
+with open(outputs_dir + 'model_info.txt', 'w') as file:
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    file.write(f'MODEL SUMMARY ({current_time})\n')
+    file.write('\n')
+
+    file.write('PARAMETERS\n')
+    file.write(f'num_epochs:          {num_epochs}\n')
+    file.write(f'learning_rate:       {learning_rate}\n')
+    file.write(f'batch_size:          {batch_size}\n')
+    file.write(f'train_set_size:      {train_set_size}\n')
+    file.write(f'hidden:              {hidden}\n')
+    file.write(f'dropout:             {dropout}\n')
+    file.write(f'seed_splitting:      {seed_splitting}\n')
+    file.write(f'seed_model_torch:    {seed_model_torch}\n')
+    file.write(f'path_to_graphs:      {path_to_graphs}\n')
+    file.write(f'path_to_csv:         {path_to_csv}\n')
+    file.write('\n')
+
+    file.write('MODEL ARCHITECTURE\n')
+    file.write(str(model))
+    file.write('\n')
+    file.write('\n')
+
+    file.write('DATASET SIZE\n')
+    file.write(f'Total number of graphs:  {len(dataset_graphs)}\n')
+    file.write(f'Graphs on training set:  {train_size}\n')
+    file.write(f'Graphs on test set:      {test_size}\n')
 
 
+# Save the loss for train and test
+with open(outputs_dir + 'loss.txt', 'w') as file:
+    file.write('Epoch      Loss_train      Loss_test\n')
 
+    for epoch in range(num_epochs):
+        file.write(f'{epoch + 1}      {train_losses[epoch]}      {test_losses[epoch]}\n')
 
 
 # Plot the train/test loss with epochs
 plt.figure()
+plt.yscale('log')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.plot(np.linspace(1, num_epochs, num_epochs-1), train_losses[1:], label='train')
 plt.plot(np.linspace(1, num_epochs, num_epochs-1), test_losses[1:], label='test')
 plt.legend()
 plt.tight_layout()
-plt.savefig('loss_plot.pdf')
+plt.savefig(outputs_dir + 'loss_plot.pdf')
 
 
-# Show the predicted value vs DFT value
+# Compute predictions for all the graphs and save them in files
 real_value_train = []
 predicted_value_train = []
 real_value_test = []
@@ -304,21 +377,8 @@ for num_graph in range(len(train_dataset)):
 
     real_value_train.append(graph.y*(max_output - min_output) + min_output)
 
-    graph.x = graph.x.to(device).float()
-    graph.edge_index = graph.edge_index.to(device).long()
-    graph.edge_attr = graph.edge_attr.to(device).float()
-    graph.y = graph.y.to(device).float()
-    graph = graph.to(device)
-
-    model = model.to(device).float()
-
-    # Make prediction
-    with torch.no_grad():  # Disable gradient calculation for inference
-        prediction = model(graph.x, graph.edge_index, graph.edge_attr, graph.batch).to(device)
-
-    # Multiply the predicted value by the normalization constant
-    predicted_value_train.append(prediction[0][0]*(max_output - min_output) + min_output)
-
+    predict_value = model_prediction(model, graph, [min_output, max_output])
+    predicted_value_train.append(predict_value)
 
 for num_graph in range(len(test_dataset)):
     graph = test_dataset[num_graph]
@@ -342,53 +402,100 @@ for num_graph in range(len(test_dataset)):
     # Multiply the predicted value by the normalization constant
     predicted_value_test.append(prediction[0][0]*(max_output - min_output) + min_output)
 
+
+# Save the prediction vs DFT results
+with open(outputs_dir + 'prediction_vs_DFT_train.txt', 'w') as file:
+    file.write('Prediction E_g (eV)           DFT E_g (eV)\n')
+
+    for case in range(len(real_value_train)):
+        file.write(f'{predicted_value_train[case]}           {real_value_train[case]}\n')
+
+with open(outputs_dir + 'prediction_vs_DFT_test.txt', 'w') as file:
+    file.write('Prediction E_g (eV)           DFT E_g (eV)\n')
+
+    for case in range(len(real_value_test)):
+        file.write(f'{predicted_value_test[case]}           {real_value_test[case]}\n')
+
+
+# Plot the predictions
 plt.figure()
 plt.xlabel('DFT computed band gap (eV)')
 plt.ylabel('Predicted band gap (eV)')
-#max_value = max(np.max(real_value_train), np.max(real_value_test), np.max(predicted_value_train), np.max(predicted_value_test))
 plt.xlim(0, 8)
 plt.ylim(0, 8)
-real_value_train = torch.tensor(real_value_train)  # Convert to tensor
+real_value_train = torch.tensor(real_value_train)
 predicted_value_train = torch.tensor(predicted_value_train)
 plt.plot(real_value_train.cpu().numpy()[:], predicted_value_train.cpu().numpy()[:], linestyle='', marker='o', alpha=0.6, color='lightsteelblue', label='train')
-real_value_test = torch.tensor(real_value_test)  # Convert to tensor
+real_value_test = torch.tensor(real_value_test)
 predicted_value_test = torch.tensor(predicted_value_test)
 plt.plot(real_value_test.cpu().numpy()[:], predicted_value_test.cpu().numpy()[:], linestyle='', marker='o', alpha=0.6, color='salmon', label='test')
 plt.plot([0, 8], [0, 8], linestyle='--', color='royalblue')
 plt.legend()
 plt.tight_layout()
-plt.savefig('predictions_plot.pdf')
+plt.savefig(outputs_dir + 'predictions_plot.pdf')
+
+plt.figure()
+plt.title('Predictions train')
+plt.xlabel('DFT computed band gap (eV)')
+plt.ylabel('Predicted band gap (eV)')
+plt.xlim(0, 8)
+plt.ylim(0, 8)
+real_value_train = torch.tensor(real_value_train)
+predicted_value_train = torch.tensor(predicted_value_train)
+plt.plot(real_value_train.cpu().numpy()[:], predicted_value_train.cpu().numpy()[:], linestyle='', marker='o', alpha=0.6, color='lightsteelblue', label='train')
+plt.plot([0, 8], [0, 8], linestyle='--', color='royalblue')
+plt.tight_layout()
+plt.savefig(outputs_dir + 'predictions_train_plot.pdf')
+
+plt.figure()
+plt.title('Predictions test')
+plt.xlabel('DFT computed band gap (eV)')
+plt.ylabel('Predicted band gap (eV)')
+plt.xlim(0, 8)
+plt.ylim(0, 8)
+real_value_test = torch.tensor(real_value_test)
+predicted_value_test = torch.tensor(predicted_value_test)
+plt.plot(real_value_test.cpu().numpy()[:], predicted_value_test.cpu().numpy()[:], linestyle='', marker='o', alpha=0.6, color='salmon', label='test')
+plt.plot([0, 8], [0, 8], linestyle='--', color='royalblue')
+plt.tight_layout()
+plt.savefig(outputs_dir + 'predictions_test_plot.pdf')
 
 
-# Save some metrics of the model
+# Compute some metrics to evaluate the model
 mse_train = mean_squared_error(real_value_train,predicted_value_train)
 mse_test = mean_squared_error(real_value_test,predicted_value_test)
 
 mae_train = mean_absolute_error(real_value_train,predicted_value_train)
 mae_test = mean_absolute_error(real_value_test,predicted_value_test)
 
-metrics_file = open('metrics.txt', 'w')
-metrics_file.write('Mean Squared Error (MSE) and Mean Absolute Error (MAE) metrics for train and test set:\n')
-metrics_file.write(f'MSE train:   {mse_train}\n')
-metrics_file.write(f'MSE test:    {mse_test}\n')
-metrics_file.write(f'MAE train:   {mae_train}\n')
-metrics_file.write(f'MAE test:    {mae_test}\n')
-metrics_file.write('\n')
-metrics_file.write('\n')
-metrics_file.write('Train and test loss after each epoch:\n')
-for epoch in range(num_epochs):
-    metrics_file.write(f'Epoch {epoch + 1} of a total of {num_epochs}\n')
-    metrics_file.write(f'     Train loss:   {train_losses[epoch]}\n')
-    metrics_file.write(f'     Test loss:    {test_losses[epoch]}\n')
-metrics_file.close()
+r2_train = r2_score(real_value_train,predicted_value_train)
+r2_test = r2_score(real_value_test,predicted_value_test)
+
+max_train = max_error(real_value_train,predicted_value_train)
+max_test = max_error(real_value_test,predicted_value_test)
+
+min_loss_train = min(train_losses)
+epoch_min_loss_train = train_losses.index(min_loss_train) + 1
+min_loss_test = min(test_losses)
+epoch_min_loss_test = test_losses.index(min_loss_test) + 1
 
 
+with open(outputs_dir + 'metrics_model.txt', 'w') as file:
+    file.write('MODEL METRICS\n')
+    file.write('\n')
 
+    file.write('TRAIN\n')
+    file.write(f'MSE:                  {mse_train}\n')
+    file.write(f'MAE:                  {mae_train}\n')
+    file.write(f'r2:                   {r2_train}\n')
+    file.write(f'Maximum error:        {max_train}\n')
+    file.write(f'Epoch minimum loss:   {epoch_min_loss_train}\n')
+    file.write('\n')
 
-
-
-
-
-
-
-
+    file.write('TEST\n')
+    file.write(f'MSE:                  {mse_test}\n')
+    file.write(f'MAE:                  {mae_test}\n')
+    file.write(f'r2:                   {r2_test}\n')
+    file.write(f'Maximum error:        {max_test}\n')
+    file.write(f'Epoch minimum loss:   {epoch_min_loss_test}\n')
+###########################################################################
