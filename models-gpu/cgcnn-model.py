@@ -28,11 +28,11 @@ from torch_geometric.nn import global_mean_pool, global_max_pool
 
 
 ################################ PARAMETERS ###############################
-num_epochs = 10                                                         # Number of epochs in the training
-learning_rate = 5e-4                                                    # Value of the learning rate step
+num_epochs = 551                                                         # Number of epochs in the training
+learning_rate = 1e-2                                                    # Value of the learning rate step
 batch_size = 128                                                        # Number of samples in the batch
 train_set_size = 0.8                                                    # Fraction of the trainin set size
-hidden = 256                                                            # Number of hidden channels in the convolutional layers
+hidden = 128                                                            # Number of hidden channels in the convolutional layers
 dropout = 0.6                                                           # Fraction of elements to dropout
 
 path_to_graphs = '../materials-dataset-new/normalized_graphs/'          # Path to the normalized graphs
@@ -44,6 +44,10 @@ outputs_dir = 'outputs_file/'                                           # Path t
 
 seed_splitting = 42                                                     # Seed for the splitting of the training and test sets
 seed_model_torch = 12345                                                # Seed for the model
+
+
+min_bg_boolean = True                                                   # Ignore materials with band gaps smaller than the desired value
+min_bg = 0.4                                                            # Minimum band gap value
 ###########################################################################
 
 
@@ -224,8 +228,11 @@ with open(path_to_csv, 'r') as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
     for row in csv_reader:
-        file_list.append(row[0])
-
+        if min_bg_boolean == True:
+            if float(row[1]) > min_bg: 
+                file_list.append(row[0])
+        else:           
+            file_list.append(row[0])
 dataset_graphs = []
 
 df_materials = pd.read_csv(path_to_csv)
