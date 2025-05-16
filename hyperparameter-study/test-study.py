@@ -41,6 +41,9 @@ model_path = 'trained_model'                                            # Path o
 outputs_dir = 'outputs_file_final/'                                     # Path to dir where outputs are saved
 
 seed_model_torch = 12345                                                # Seed for the model
+
+min_bg_boolean = True                                                   # Ignore materials with band gaps smaller than the desired value
+min_bg = 0.4                                                            # Minimum band gap value
 ###########################################################################
 
 
@@ -148,7 +151,11 @@ with open(path_to_csv, 'r') as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
     for row in csv_reader:
-        file_list.append(row[0])
+        if min_bg_boolean == True:
+            if float(row[1]) > min_bg: 
+                file_list.append(row[0])
+        else:           
+            file_list.append(row[0])
 
 dataset_graphs = []
 
