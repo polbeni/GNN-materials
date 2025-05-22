@@ -43,11 +43,12 @@ I have verified they work properly in MacOS and GNU/Linux machines.
 The available functionalities are:
 - Create a materials database using [The Materials Project](https://next-gen.materialsproject.org/).
 - Create graphs from materials structure files (such as POSCAR or cif files), and normalize or standardize their features.
-- Create a CGCNN model (model architecture and machine learning parameters (learning rate, batch size, ...) can be easily modified from the script).
+- Create a CGCNN model (model architecture and machine learning parameters (learning rate, batch size, ...) can be easily modified from the scripts).
+- Perform hyperparameter testing, screening for different models and parameters such as the learnin rate or dropout. The models are trained on the training set and evaluated on the validation set. Then the models are ranked using different metrics from their performance in the validation set. The performance of the final model can be verified on the test set.
 - Train the model with the created database and re-train the model (as many times as you want) with your own DFT results.
 - Use the trained (or re-trained) model to predict materials properties.
 
-When training the CGCNN model, GPU (with CUDA) will be used preferably over CPU. However, if not CUDA detected the model will train over CPU.
+When training the CGCNN model, GPU (with CUDA) will be used preferably over CPU. However, if not CUDA detected the model will train over CPU. For now not compatible with Apple Silicon GPU (MPS).
 
 ## How to use it
 
