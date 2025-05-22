@@ -42,9 +42,6 @@ outputs_dir = 'outputs_file/'                                           # Path t
 
 seed_splitting = 42                                                     # Seed for the splitting of the training and test sets
 seed_model_torch = 12345                                                # Seed for the model
-
-min_bg_boolean = True                                                   # Ignore materials with band gaps smaller than the desired value
-min_bg = 0.4                                                            # Minimum band gap value
 ###########################################################################
 
 
@@ -205,36 +202,12 @@ else:
     print("GPU not available. Using CPU.")
 
 
-# Split between train+validation and test
-file_list = []
-
-with open(path_to_csv, 'r') as csv_file:
-    csv_reader = csv.reader(csv_file)
-    next(csv_reader)
-    for row in csv_reader:
-        if min_bg_boolean == True:
-            if float(row[1]) > min_bg: 
-                file_list.append(row[0])
-        else:           
-            file_list.append(row[0])
-
-random.shuffle(file_list)
-
+# Save in array the graphs in the train-validation sets
 file_list_train = []
-file_list_test = []
-for graph_num in range(len(file_list)):
-    if graph_num <= ((train_set_size + validation_set_size) * len(file_list)):
-        file_list_train.append(file_list[graph_num])
-    else:
-        file_list_test.append(file_list[graph_num])
 
-with open('train_val_graphs.txt', 'w') as file:
-    for graph_num in range(len(file_list_train)):
-        file.write(f'{file_list_train[graph_num]}\n')
-
-with open('test_graphs.txt', 'w') as file:
-    for graph_num in range(len(file_list_test)):
-        file.write(f'{file_list_test[graph_num]}\n')
+with open('train_val_graphs.txt', 'r') as file:
+    for row in file:
+        file_list_train.append(row.split()[0])
 
 
 # Load the normalized graphs and save them in an array
