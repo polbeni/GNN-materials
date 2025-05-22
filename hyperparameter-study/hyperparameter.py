@@ -7,10 +7,9 @@
 
 ################################# LIBRARIES ###############################
 import os
-import csv
 import shutil
-import random
 from datetime import datetime
+import gc
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -347,7 +346,7 @@ for model_it in models:
 
                     for epoch in range(num_epochs):
                         file.write(f'{epoch + 1}      {train_losses[epoch]}      {validation_losses[epoch]}\n')
-
+                
                 # Plot the train/validation loss with epochs
                 plt.figure()
                 plt.yscale('log')
@@ -358,6 +357,7 @@ for model_it in models:
                 plt.legend()
                 plt.tight_layout()
                 plt.savefig(path_model + '/' + outputs_dir + 'loss_plot.pdf')
+                plt.close()
 
                 # Compute predictions for all the graphs and save them in files
                 real_value_train = []
@@ -427,6 +427,7 @@ for model_it in models:
                 plt.legend()
                 plt.tight_layout()
                 plt.savefig(path_model + '/' + outputs_dir + 'predictions_plot.pdf')
+                plt.close()
 
                 plt.figure()
                 plt.title('Predictions train')
@@ -440,6 +441,7 @@ for model_it in models:
                 plt.plot([0, 8], [0, 8], linestyle='--', color='royalblue')
                 plt.tight_layout()
                 plt.savefig(path_model + '/' + outputs_dir + 'predictions_train_plot.pdf')
+                plt.close()
 
                 plt.figure()
                 plt.title('Predictions validation')
@@ -453,6 +455,7 @@ for model_it in models:
                 plt.plot([0, 8], [0, 8], linestyle='--', color='royalblue')
                 plt.tight_layout()
                 plt.savefig(path_model + '/' + outputs_dir + 'predictions_validation_plot.pdf')
+                plt.close()
 
                 # Compute some metrics to evaluate the model
                 mse_train = mean_squared_error(real_value_train, predicted_value_train)
@@ -491,4 +494,10 @@ for model_it in models:
                     file.write(f'r2:                   {r2_validation}\n')
                     file.write(f'Maximum error:        {max_validation}\n')
                     file.write(f'Epoch minimum loss:   {epoch_min_loss_validation}\n')
+
+
+                # Clear cache and delete model
+                del model
+                torch.cuda.empty_cache()
+                gc.collect()
 ###########################################################################
