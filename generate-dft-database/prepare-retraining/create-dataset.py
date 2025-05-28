@@ -312,7 +312,7 @@ for num in range(250):
             structure = Poscar.from_file(path_directory + '/POSCAR').structure
 
             cif_writer = CifWriter(structure)
-            cif_filename = 'HSEsol/CAP-structures/pbesol_pc_pho_' + str(num+1).zfill(4) + '.cif'
+            cif_filename = 'HSEsol/CAP-structures/hsesol_pc_pho_' + str(num+1).zfill(4) + '.cif'
             cif_writer.write_file(cif_filename)
 
 
@@ -335,7 +335,7 @@ for num in range(750):
             structure = Poscar.from_file(path_directory + '/POSCAR').structure
 
             cif_writer = CifWriter(structure)
-            cif_filename = 'HSEsol/CAP-structures/pbesol_ss_pho_' + str(num+1).zfill(4) + '.cif'
+            cif_filename = 'HSEsol/CAP-structures/hsesol_ss_pho_' + str(num+1).zfill(4) + '.cif'
             cif_writer.write_file(cif_filename)
 
 
