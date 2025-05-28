@@ -181,7 +181,7 @@ materials.write('material id       band gap (eV)       type\n')
 ### Static structures
 for num in range(100):
     try:
-        path_directory = '/home/pol/work/db-cap-ml-backup/uniform-dist/db-HSEsol-static/structures/struc-' + str(num+1).zfill(4)
+        path_directory = '/home/pol/work/db-cap-ml-backup/static/db-HSEsol-static/structures/struc-' + str(num+1).zfill(4)
 
         _, _, _, bandgap = electronic_bandGap(path_directory + '/DOSCAR')
 
