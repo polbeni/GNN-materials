@@ -9,15 +9,15 @@
 import math
 import json
 
-import torch
-from torch_geometric.data import Data
-
 from pymatgen.io.vasp import Poscar
 from pymatgen.io.cif import CifWriter
 from pymatgen.io.cif import CifParser
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+import plotly.graph_objects as go
+from plotly.offline import plot
 ###########################################################################
 
 
@@ -210,6 +210,77 @@ def plot_structure(node_positions, edge_vectors):
 
     plt.tight_layout()
     plt.show()
+
+
+def save_structure_to_html(node_positions, edge_vectors, filename="structure.html"):
+    """
+    Represent the structure and save it in a html format to be opened
+
+    Inputs:
+        adjacency_list: list of pairs of nodes that verify to be closer than lim_dist
+        edge_list: list of features for all the edges in adjacency list
+        filename: name to the html file
+    """
+    # Replicate your plotting logic in Plotly
+    species_properties = {
+        'Ag': {'marker': 'circle', 'color': 'silver', 'label': 'Ag'},
+        'S': {'marker': 'square', 'color': 'yellow', 'label': 'S'},
+        'Br': {'marker': 'diamond', 'color': 'brown', 'label': 'Br'}
+    }
+
+    # Create atom traces
+    atom_traces = []
+    plotted_labels = set()
+    
+    for atom in node_positions:
+        x, y, z, comp, type_cell = atom
+        spec = comp.reduced_formula
+        props = species_properties[spec]
+        
+        size = 15 if type_cell == 'unitcell' else 5
+        show_legend = props['label'] not in plotted_labels
+        
+        atom_traces.append(go.Scatter3d(
+            x=[x],
+            y=[y],
+            z=[z],
+            mode='markers',
+            marker=dict(
+                symbol=props['marker'],
+                color=props['color'],
+                size=size,
+                line=dict(color='black', width=1)
+            ),
+            name=props['label'] if show_legend else None,
+            showlegend=show_legend
+        ))
+        if show_legend:
+            plotted_labels.add(props['label'])
+
+    # Create bond traces (exactly matching your original style)
+    bond_traces = []
+    for p1, p2 in edge_vectors:
+        bond_traces.append(go.Scatter3d(
+            x=[p1[0], p2[0]],
+            y=[p1[1], p2[1]],
+            z=[p1[2], p2[2]],
+            mode='lines',
+            line=dict(color='black', width=1, dash='dash'),
+            opacity=0.5,
+            showlegend=False
+        ))
+
+    # Combine and save
+    fig = go.Figure(data=atom_traces + bond_traces)
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='X (Å)',
+            yaxis_title='Y (Å)',
+            zaxis_title='Z (Å)'
+        ),
+        margin=dict(l=0, r=0, b=0, t=0)
+    )
+    plot(fig, filename=filename, auto_open=False)
 ###########################################################################
 
 
@@ -223,5 +294,6 @@ node_positions, edge_vectors = get_graph_for_visual('POSCAR', edge_radius)
 
 plot_structure(node_positions, edge_vectors)
 print(len(edge_vectors))
+save_structure_to_html(node_positions, edge_vectors)
 
 ###########################################################################
