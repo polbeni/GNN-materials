@@ -1,4 +1,4 @@
-# Pol Benítez Colominas, March 2024 - May 2025
+# Pol Benítez Colominas, May 2025
 # Universitat Politècnica de Catalunya
 
 # Explain a CGCNN model
