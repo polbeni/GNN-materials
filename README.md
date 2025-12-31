@@ -98,6 +98,18 @@ $ python3 compute-bg.py
 ```
 Now the graphs should be normalized (or standardized) using the same parameters used for the trained model used.
 
+## How to cite
+
+If you use this repository, please cite it as follows:
+```
+@article{benitez2025physics,
+  title={Why Physics Still Matters: Improving Machine Learning Prediction of Material Properties with Phonon-Informed Datasets},
+  author={Ben{\'\i}tez, Pol and L{\'o}pez, Cibr{\'a}n and Saucedo, Edgardo and Mizoguchi, Teruyasu and Cazorla, Claudio},
+  journal={arXiv preprint arXiv:2511.15222},
+  year={2025}
+}
+```
+
 ## Authors
 
 This code and repository are being developed by:
