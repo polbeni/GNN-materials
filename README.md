@@ -10,34 +10,6 @@ In this approach, we generate graphs with as many nodes as there are atoms in th
 Once we have the graphs, convolutional graph networks are used to perform graph regression. An excellent introduction to the topic of graph convolutional networks, with interactive figures, can be found in [[2]](#2).
 
 
-## Installation
-
-To download the repository, use:
-
-```bash
-$ git clone https://github.com/polbeni/GNN-materials
-```
-
-## Requirments
-
-The required Python packages to execute the different scripts are:
-- mp-api
-- pymatgen
-- matplotlib
-- numpy
-- pandas
-- scikit-learn
-- torch
-- torch_geometric
-
-The different modules can be downloaded manually, or you can execute the following command to install them automatically in a python environment:
-```bash
-$ cd env/train-cgcnn/
-$ pip install -r requirements.txt
-```
-I have verified they work properly in MacOS and GNU/Linux machines.
-
-
 ## Functionalities
 
 The available functionalities are:
@@ -50,53 +22,34 @@ The available functionalities are:
 
 When training the GCNN model, GPU (with CUDA) will be used preferably over CPU. However, if not CUDA detected the model will train over CPU. For now not compatible with Apple Silicon GPU (MPS).
 
-## How to use it
 
-### Create the materials database
-To create a materials database to train a GCN model that predicts crystal structure properties, we can use materials calculation databases. Here we use the API of [The Materials Project](https://next-gen.materialsproject.org/). We are interested in the structure and band gap values of all materials that contain at least one of the chemical species of interest and have a non-null band gap (insulators and semiconductors). In the `api-materials-project` directory, edit the `find-materials-mp.py` script to download the materials and features of interest (IMPORTANT: you should provide your Materials Project API key, which you can find [here](https://next-gen.materialsproject.org/api#api-key)). Then execute the script:
+## Installation
+
+To download the repository, use:
+
 ```bash
-$ python3 find-materials-mp.py
+$ git clone https://github.com/polbeni/GNN-materials
 ```
 
-### Generate and normalize graphs
-Once we have our materials database, we need to convert our structures into graphs to train the graph convolutional network model. To create the graphs, execute the following scripts in the `create-graphs` directory:
-```bash
-$ python3 create-graphs.py
-$ python3 create-csv.py
-```
-The file `create-graphs/atoms_dict.json` contains the features for each atom ('atomic' nuumber, electronegativity, ion weight (in u), and ion radius (in pm)), and it is used to create the node features. Edges only have one feature, the euclidean distance.
 
-Then, we can normalize (uniform distribution) or standardize (Gaussian distribution) the nodes and edges features with:
-```bash
-$ python3 normalize-graphs.py
-```
-or
-```bash
-$ python3 standerize-graphs.py
-```
-respectively.
+## Requirments
 
-After normalization (or standardization), output files with the normalization (or standardization) values are generated to be used later, such as when re-training the model with new data or predicting new materials.
+The required Python packages to execute the different scripts are:
+- matplotlib
+- mp-api
+- numpy
+- pandas
+- pymatgen
+- scikit-learn
+- torch
+- torch_geometric
 
-### Create and train the GCN model
-The next step is to create a graph convolutional network model and train it. We used [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/). Go to the `models-gpu` directory and edit `models-gpu/cgcnn-model.py` with the desired parameters for the training (training set size, learning rate, number of epochs, etc.) as well as the model architecture, and the correct path to graphs and related files. Then execute the file:
+The different modules can be downloaded manually, or even easier, installed by using the `requirements.txt` files that can be found in the `env` dir:
 ```bash
-$ python3 cgcnn-model.py
+$ pip install -r requirements.txt
 ```
-The provided outputs are: a file with the final errors and epoch losses, a plot with the evolution of the losses, a plot with the prediction results, and a file with the trained model named `trained_model`.
+It should work in MacOS and GNU/Linux machines.
 
-To re-train the model with new DFT data, use the script in the `models-gpu` directory:
-```bash
-$ python3 cgcnn-retrain.py
-```
-The graphs can be normalized (or standardized) using the same parameters used for the original database, or using new parameters.
-
-### Predict properties of new materials
-Once we have a model, we can use the script in `predict-bandgaps` to make predictions (in our case, predict band gaps):
-```bash
-$ python3 compute-bg.py
-```
-Now the graphs should be normalized (or standardized) using the same parameters used for the trained model used.
 
 ## How to cite
 
