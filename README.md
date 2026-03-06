@@ -60,6 +60,14 @@ If you use this repository, please cite it as follows:
   year={2025}
 }
 ```
+```
+@article{benitez2026machine,
+  title={Machine Learning Modeling of Temperature-Dependent Optoelectronic Properties of Anharmonic Solid Solutions},
+  author={Ben{\'\i}tez, Pol and L{\'o}pez, Cibr{\'a}n and Saucedo, Edgardo and Cazorla, Claudio},
+  journal={arXiv preprint arXiv:2602.20778},
+  year={2026}
+}
+```
 
 ## Authors
 
